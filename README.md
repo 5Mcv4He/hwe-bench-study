@@ -1,51 +1,70 @@
 # 基于 HWE-bench v1.1 的学习、研究与诊断
 
-**研究初稿 v0.1 · 2026 年 11 月 23 日**
+**一项芯片工程故障，怎样从开发者合并的代码改动，变成 Agent 能独立求解、第三方能自动判分的一道题？**
 
-## 一、为什么从验证工程的角度读这个榜单
+## 一、真实硬件工程里，开发者究竟修了什么？
 
-如果一位工程师告诉我“这个 Bug 修好了，仿真也过了”，我会先问：复现了什么现象？哪一个信号表明之前错了？如果换一种看起来也合理的修法，这个测试能把它判错吗？读 HWE-bench v1.1 时，我遇到了同样的问题。七套 Agent 系统在 417 道真实工程修复题上全部超过 90%。这里的 Agent 指能在工程目录里读文件、编辑代码、调用工具并根据反馈继续工作的模型系统。分母很清楚，分子里每一个“修好”的含义值得拆开看。[官方榜单](https://pku-liang.github.io/hwe-bench/)
+HWE-bench 从六个开源工程超过 30,000 个合并请求（Pull Request，PR）出发，最终得到 417 道可执行的修复任务。PR 留下了代码从哪个版本改到哪个版本，相关 Issue 有时记录现象，有时只列后续工作。要把这段历史交给一个能读写仓库、运行工具的模型 Agent，需要还原修复前的工程，写出它应该满足的行为，再做出能判断补丁对错的测试。[论文](https://arxiv.org/html/2604.14709v3) · [v1.1 数据集](https://huggingface.co/datasets/henryen/hwe-bench/tree/ef3f000af6abdb4a8b4ba6292069694f4d17f14d)
 
-本文沿着一道题的生命周期展开。先看故障发生在什么硬件里，再看上游工程活动怎样被筛成候选题、怎样构建可执行环境，最后才看模型成绩。**#2232 用来解释一道题如何成立，#54 用来检验一道已经成立的题能证明多少。** 本文把作者记录、读取源码所得的结论和本项目实际运行的结果分别标明。[数据与复现实验](#reproduction)
+v1.1 榜单上的七套模型与工具组合，通过率都超过 90%。这个分数的分母究竟包括什么？要解释它，得先沿着一道题往回追：开发者遇到了什么故障，制题者保留了哪些线索，裁判又能观察到哪些行为。
+
+六个工程覆盖处理器核、生成器、片上系统和硬件信任根。下面各取一个入选 PR，从现象对照修复动作。这样才能看清同一个“修 Bug”标签底下，工程师做的是哪些不同的判断。
+
+**Ibex（35 题）｜CPU 进入调试状态后，谁还能拒绝它的内存访问？** Ibex 是一个小型 RISC-V 处理器核。PMP（物理内存保护）通常按地址和权限决定能否取指、读写。在 Debug Mode 下，处理器必须能够访问调试模块所在的地址范围，原检查却可能将合法访问挡住。上游把调试状态和调试地址范围接入 PMP 判断，使范围内的访问获得放行，范围外仍走原有规则。工程师需要先确定例外成立的两个条件，再决定在哪条权限路径上实现它。这也是后文贯穿制题和评分的例子。[PR #2232](https://github.com/lowRISC/ibex/pull/2232)
+
+**Rocket Chip（32 题）｜刚退出复位，指令缓存为什么会报告命中？** 这个片上系统生成器用 Chisel 描述硬件。指令缓存用寄存器 `s2_hit` 保存前一流水级的命中结果。第一次真正的查询还没建立结果时，缺少复位初值就可能让它报出有效响应。参考补丁只改一行，把 `RegEnable(s1_hit, !stall)` 改成 `RegEnable(s1_hit, Bool(false), !stall)`。增加的参数规定了复位后的值；稳态运行时的命中计算可以原样保留。[PR #404](https://github.com/chipsalliance/rocket-chip/pull/404)
+
+**香山（54 题）｜一个队列条目里，部分指令提交、部分被冲刷，这一项算完成了吗？** 香山是高性能乱序 RISC-V 处理器。前端的 FTQ（取指目标队列）按条目记录取指与预测信息，但后端反馈的是指令的提交或冲刷。遇到两种状态混合，按原条件推进指针，可能连带影响预测器更新。补丁重新判断条目中最后一条有效指令是否已经提交，并区分条目提交与指针前移的条件。它和 Rocket #404 都只动一个文件，读懂这个改动却需要跟踪多个周期的状态。[PR #3307](https://github.com/OpenXiangShan/XiangShan/pull/3307)
+
+**Caliptra RTL（16 题）｜最后一个数据拍正常，整次密钥读取就成功了吗？** 在这个硬件信任根子系统中，一次密钥传输要经历多个时钟周期。原逻辑可能让末拍的正常状态覆盖前面出现的错误。上游让错误一旦发生便保留到这次访问结束。同一个 PR 还修正 AES 读取新密钥时对中间暂存寄存器的清零。一个 PR 编号下有两项验收条件；只测错误锁存，无法说明清零也正确。[PR #963](https://github.com/chipsalliance/caliptra-rtl/pull/963)
+
+**OpenTitan（245 题）｜时钟已经停了，复位还能传到下游吗？** 在这个安全片上系统里，故障落在复位管理器的连接关系上。外部上电复位信号有效时，部分时钟可能已经停止，原有复位路径无法可靠覆盖有关内部节点。上游调整复位树，让相关节点从适当的上电复位源获得复位。与 Rocket #404 相比，这里需要验证的是信号能否到达目标模块，检查一个寄存器的复位值还不够。[PR #10732](https://github.com/lowRISC/opentitan/pull/10732)
+
+**CVA6（35 题）｜为什么一项“硬件评测”会要求改 C++？** CVA6 工程包含配套的 Spike 指令集模拟器。模拟器匹配一类扩展指令时，对 `funct7` 字段使用的掩码是 `0xe`，漏查若干编码位，可能把不支持的编码判成匹配。补丁将掩码改为 `0x7e`。修复发生在软件译码逻辑里，正确与否取决于硬件指令编码契约。这道题在数据中归为 `SW_BUG_FIX / SW_FW_LOGIC`。[PR #1482](https://github.com/openhwgroup/cva6/pull/1482)
+
+六个工程的样本权重相差很大。OpenTitan 独占 245/417，约 58.75%。后面读总榜时，这个分母决定了哪些工程的表现对总成绩影响最大。[逐项目统计](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/projects.csv)
 
 <a id="engineering"></a>
 
-## 二、从六个工程的开发历史里选出 417 道题
+## 二、超过 30,000 个 PR，怎样筛成能制题的候选？
 
-### 先定位工程，才能理解故障
+上面六例来自最终数据。回到制题起点，开发者合并 PR 时并没有替评测者准备好题目。HWE-bench 的前八步先处理三件事：取得上下文、识别修复、估计能否复现。上游用 s01–s11 标识各阶段，前一阶段输出的 JSONL（每行一条 JSON 记录）供下一阶段读取。[采集流程源码与逐阶段说明](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/collect)
 
-RTL 是寄存器传输级描述，用来规定电路在每个时钟周期如何传送数据和更新状态。这六个仓库处在不同的设计层级。同是“改一段 RTL”，可能是在改一个寄存器的复位值，也可能要协调处理器前端、流水线和整个复位网络。
-
-| 工程与题数 | 工程里有什么 | 一个入选 PR 暴露出的工程问题 |
+| 源码阶段 | 谁做、具体做什么 | 这一阶段结束时得到了什么 |
 |---|---|---|
-| Ibex · 35 | 小型 RISC-V 处理器核。取指、译码、执行、访存和权限检查共同决定一条指令能否完成 | 调试状态改变了特定地址范围的访问语义，原权限路径仍可能拒绝合法访问。[#2232](https://github.com/lowRISC/ibex/pull/2232) |
-| CVA6 · 35 | 可配置 RISC-V 处理器核。工程还包含参考模拟器等软件，用来核对指令行为 | Spike 软件模拟器匹配一类扩展指令时，掩码少检查了若干位。修复落在 C++ 和对应的供应商补丁里。[#1482](https://github.com/openhwgroup/cva6/pull/1482) |
-| Caliptra RTL · 16 | 硬件信任根子系统，包含密钥存储、密码运算模块及控制逻辑 | 一次多拍密钥读取中，末拍的正常状态可能覆盖先前的错误。同一 PR 还修改了密钥暂存寄存器的清理。[#963](https://github.com/chipsalliance/caliptra-rtl/pull/963) |
-| Rocket Chip · 32 | 可配置的片上系统生成器，组合处理器、缓存与互连。用 Scala 中的 Chisel 描述硬件 | 指令缓存命中寄存器缺少明确复位初值，复位后可能报出有效响应。参考修复只有一行。[#404](https://github.com/chipsalliance/rocket-chip/pull/404) |
-| OpenTitan · 245 | 安全片上系统（SoC）。处理器、复位管理、外设、密码模块及大量验证环境共存 | 部分时钟停止时，上电复位仍须传到下游。故障发生在复位树的连接关系上。[#10732](https://github.com/lowRISC/opentitan/pull/10732) |
-| 香山 XiangShan · 54 | 高性能乱序 RISC-V 处理器，有预测取指、乱序执行及按序提交等环节 | 取指目标队列的条目内，部分指令已提交，另一些被冲刷。决定条目何时完成、指针何时前移，要同时考虑这两种状态。[#3307](https://github.com/OpenXiangShan/XiangShan/pull/3307) |
+| s01 收集 PR | 用 GitHub API 分页读取仓库 PR，给已合并的 PR 补取提交记录 | 包含开发描述、合并状态和提交消息的原始记录 |
+| s02 关联 Issue | 检查已关闭、已合并，从标题、正文和提交消息提取 Issue 引用。实现默认调用 DeepSeek，也可以切换为正则匹配 | 一份 PR 对应哪些 Issue 编号。引用能找回上下文，不能单独证明因果 |
+| s03 获取 Issue | 对编号去重，用 API 取标题、正文和状态 | 单独的 Issue 记录 |
+| s04 合并上下文 | 按编号将 Issue 内容并回对应 PR | 后续分类器能一起读到问题描述和开发者的改动说明 |
+| s05 拆补丁 | 取代码差异，按文件路径中的测试标记拆为修复补丁 `fix_patch` 和测试补丁 `test_patch`，丢弃修复部分为空的记录 | 已知修法、随 PR 提交的测试改动，以及变更规模 |
+| s06 限制规模 | Python 规则按文件数和增删行数过滤，默认上限分别为 50 和 2,000 | 规模适合继续处理的候选，这一步尚未判断技术难度 |
+| s07 判断修了什么 | 分类 Agent 读 PR、Issue 和补丁，输出一级类别、二级类别、置信度和理由 | RTL 修复、软件修复、其他。纯测试、文档、重构、功能新增等按规则归入其他 |
+| s08 判断是否适合制题 | Agent 分别评估工程价值、软件问题所需硬件知识、复现线索及仿真成本 | 四个分项和优先级，供制题阶段择取候选 |
 
-Rocket #404 与香山 #3307 的参考修复都只涉及一个文件。前者用一个问题就能说清预期：复位结束、尚未建立命中结果时，有效位应是什么？后者得沿着同一批指令在多个周期里的状态变化推理。**改动多少文件可以度量交付规模，很难单独度量定位难度。** 六个工程的任务数也极不均衡，OpenTitan 占 245/417，即 58.75%。[论文的项目说明](https://arxiv.org/html/2604.14709v3) · [逐项目统计](evidence/projects.csv)
+**s02 的一个具体陷阱。** Ibex #2232 关联的 #2233 是为这次修改另开的验证待办。读它可以知道工程师想覆盖哪些情况，却不能把它写成最初发现故障的记录。采集器检索引用时承担的是找线索的工作。最终数据还有两条关联 Issue 列表为空；公开实现的筛选规则和发布数据的实测属性，应分别描述。[Issue #2233](https://github.com/lowRISC/ibex/issues/2233) · [关联逻辑](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/collect/s2_filter_by_issues.py)
 
-### 入选的是什么，落选的又是什么
+**s07 怎样区分 Bug？** 一级标签回答根因落在 RTL 设计、软件还是其他改动。二级标签才回答具体违反了哪种约束。下面是 v1.1 对 417 条任务的实际计数；分类提示中列出了兜底标签，最终数据恰好没有题使用它们。[分类提示](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/collect/s7_instruction.py) · [计数表](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/task_labels.csv)
 
-开发者在 Issue 中记录现象或待办，在 PR（合并请求）里提交代码差异。一份 PR 可以顺手修多个问题，也可以在合并设计修改后另开 Issue 补验证。HWE-bench 从 PR 出发，寻找相关 Issue、修复前的工程快照和实际代码改动。论文报告起点超过 30,000 个 PR，最终有 417 个验证任务。中间各步的完整淘汰名单在本次查阅的材料中没有找到。[论文构造方法](https://arxiv.org/html/2604.14709v3) · [收集源码](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/collect)
-
-| 环节 | 实际输入、判断和去向 | 对样本形成的影响 |
+| 根因类别 | 二级标签与实际题数 | 分类时看的证据 |
 |---|---|---|
-| 找到开发上下文 | 从仓库取 PR 与提交，检查合并状态，从描述和提交信息提取 Issue 引用，拉取 Issue 正文 | “被引用”可以表示后续验证工作。最终 417 条里还有 2 条关联列表为空，不能给每题都硬配一个原始故障 Issue |
-| 拆代码与测试 | 比较修复前后文件，根据路径中的 test、tb 等标记分成 fix_patch 和 test_patch。命令行默认上限为 50 个文件、增删合计 2,000 行 | 规则使小而可控的改动更易进入后续阶段。路径启发式也可能把验证工程文件保留在 fix_patch 里 |
-| 判断修复类型 | 分类 Agent 读取 PR、Issue、补丁，输出 RTL 修复、软件修复或其他，再给二级标签 | 标签描述构造端对问题的判断。按 v1.1 全量统计，逻辑 136、接口 100、规格 85、配置集成 46、时序同步 40，另有软件类 10 |
-| 估计制题可行性 | 为工程价值、软硬件跨层深度、复现线索、仿真成本评分。优先级分别以 4、2、6、−3 加权；下游筛选条件可配置 | 复现线索对排序很重要。RTL 类被要求把跨层字段置零，零值无法用来证明任务只需单模块推理 |
-| 验证与入库 | 生成测试，实际检查错误基线与参考修复，再生成、复核题面 | 最终样本取决于能否在给定环境里稳定制造并检测现象，公开数据允许复核入选结果 |
+| RTL 设计，407 题 | 功能逻辑 136、接口协议 100、规格实现 85、配置集成 46、时序同步 40 | 是状态转移算错、握手顺序有误、违反架构规范、接线参数不对，还是时钟复位关系有问题？ |
+| 软件，10 题 | 硬件配置 7、软件自身逻辑 2、软硬件交互 1 | 是写错寄存器配置、软件计算本身出错，还是错误处理了中断、状态或握手？ |
 
-[Issue 关联](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/collect/s2_filter_by_issues.py) · [补丁筛选](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/collect/s6_filter_by_patch.py) · [可行性打分](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/collect/s8_instruction.py) · [标签计数](evidence/task_labels.csv)
+分类规则本身也值得核查。Rocket Chip #485 的上游改动引入 AHB 适配器，而纯功能新增按分类规则应属于其他。它的入选提出了一个具体的审查问题：题面把哪种原有行为界定为缺陷？要判定是否误分类，还需对照基线行为、题面与测试，单看 PR 标题无法定论。[PR #485](https://github.com/chipsalliance/rocket-chip/pull/485)
 
-举两个分母之外的例子。Ibex #2216 是已合并的一行修复，寄存器文件的 A 读端口错用了 B 端口地址。#2166 同样已经合并，涉及 6 个文件、增加 110 行、删除 7 行。两者的编号都没有出现在这 417 条数据里，单凭最终名单无法判定是 Issue 关联、人工筛选、制题成本还是运行验证造成了落选。要研究筛选规则偏爱什么，下一份最有价值的材料是逐阶段的候选 ID 与拒绝原因。用零星未入选例子估算整套漏斗会把推断误写成观测。[Ibex #2216](https://github.com/lowRISC/ibex/pull/2216) · [Ibex #2166](https://github.com/lowRISC/ibex/pull/2166) · [v1.1 数据](https://huggingface.co/datasets/henryen/hwe-bench/tree/ef3f000af6abdb4a8b4ba6292069694f4d17f14d)
+**s08 的高分代表什么？** 四项各取 0–2 分，优先级等于工程价值 × 4，加跨层深度 × 2，加复现线索 × 6，再减仿真成本 × 3。CVA6 #1482 的四项为 1、1、1、0，所以得到 12 分。这里最重的是复现线索：已有明确触发输入和预期行为，会使制题更可行。对于 RTL 类，提示要求跨层深度一项填零，因此不能拿这个零评价香山前后端推理是否复杂。进入 s09 时还可分别设置最低工程价值、最低复现线索等条件；12 分这个例子说明算法如何排序，不能推出一条统一录取线。[打分规则](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/collect/s8_instruction.py) · [下游筛选参数](https://github.com/pku-liang/hwe-bench/blob/7bab86a/hwe_bench/harness/tbgen/prepare_input.py)
+
+再看两个未入选的 PR。Ibex #2216 是已合并的一行修复，寄存器文件的 A 读端口错用了 B 端口地址。#2166 同样已经合并，涉及 6 个文件、增加 110 行、删除 7 行。两者的编号都没有出现在这 417 条数据里，单凭最终名单无法判定是 Issue 关联、人工筛选、制题成本还是运行验证造成了落选。要研究筛选规则偏爱什么，下一份最有价值的材料是逐阶段的候选 ID 与拒绝原因。用零星未入选例子估算整套漏斗会把推断误写成观测。[Ibex #2216](https://github.com/lowRISC/ibex/pull/2216) · [Ibex #2166](https://github.com/lowRISC/ibex/pull/2166) · [v1.1 数据](https://huggingface.co/datasets/henryen/hwe-bench/tree/ef3f000af6abdb4a8b4ba6292069694f4d17f14d)
+
+## 三、筛完 PR 以后，怎样把已知修复变成一道题？
+
+走完 s08，制题者知道哪份代码有问题，也知道上游怎样修。还缺两样东西：一个能自动判断修复是否生效的测试，一份让另一位工程师或 Agent 能独立开工的题面。s09–s11 依次交付它们。[上游验证与制题流程](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness)
+
+1. **s09 写复现测试。** 制题端按项目、仓库和 PR 号，把 s08 评分与 s05 保存的代码差异合并。制题 Agent 可以看参考补丁，使用该工程的工具链，写出 `tb_script.sh`，需要时补写环境准备脚本。候选测试要在修复前的代码上测出失败，应用参考补丁后用同一测试测出通过。s05 拆出的 `test_patch` 记录上游提交过什么；这里生成的 `tb_script` 才承担评测复现工作，所以没有随 PR 提交测试的 #2232 仍有机会成为题。[测试生成](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness/tbgen)
+2. **s10 在标准环境复验。** 把候选测试交给统一验证程序，在按项目准备的 Docker 容器内重新执行两种代码状态，解析带名称的测试结果。若脚本有问题，制题方可修正脚本后再验证。s09 是把一个能触发故障的实验做出来，s10 要确认它换到正式评分流程还能重复。交付物包括通过复验的脚本和两侧运行记录。[标准复验](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness/verify)
+3. **s11 根据已验证的行为写题面。** 题面说明触发条件、观察到的错误、预期行为及受影响功能。复核时既要核对描述是否和测试一致，也要检查有没有泄漏上游补丁或隐藏用例。最后将审核后的 `problem_statement` 连同验证字段写回数据集。这解释了为什么题面放在制题末尾生成：到此时，制题者才知道裁判在环境里实际观察到了什么。[题面生成与复核](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness/psgen)
 
 <a id="environment"></a>
-
-## 三、一项修复怎样变成可执行的 Agent 任务
 
 ### 跟踪 Ibex #2232：需求、参考解和测试分别给了什么
 
@@ -53,7 +72,14 @@ Rocket #404 与香山 #3307 的参考修复都只涉及一个文件。前者用�
 
 在数据记录里，这道题的标签是 RTL_SPEC，优先级为 17。面向求解者的题面已经交代了触发状态、地址范围、三种访问类型，也指明 PMP 权限检查路径。Agent 的工作仍包括在实际工程里接通信号、实现正确条件并交付可应用的补丁。因为题面已经提供了定位线索，通过这道题能为“按明确契约完成工程修改”提供证据；对“从模糊外部症状独立定位根因”的支持弱一些。[冻结版任务数据](https://huggingface.co/datasets/henryen/hwe-bench/blob/ef3f000af6abdb4a8b4ba6292069694f4d17f14d/hwe_bench_full.jsonl)
 
-实际测试名为 `pmp_debug_dm_access`。Testbench 是为设计提供输入、模拟外部环境并检查结果的程序。这道题在处理器核上运行一小段调试程序。它先用一个已知数据值检验范围内读取和写回，再由范围外访问的异常处理路径报告结果。最终判据同时查看结果标志与写回值；意外完成范围外访问或长时间没有进展都会失败。**只检查范围内读成功，便无法排除把整个调试状态都无条件放开的错误方案。** 这也是为什么两个方向的检查都要保留。
+**打开隐藏测试，看裁判在什么时刻判错。** 这道题的具名检查叫 `pmp_debug_dm_access`。制题端生成的 shell 脚本组织仿真材料，其中 `tb_pmp_debug_dm.sv` 搭建测试平台，`prim_stubs.sv` 提供仿真所需的原语替身，`sim_main.cpp` 驱动 Verilator 仿真。被测对象仍是实际 Ibex RTL。只看文件名很难理解它到底测了什么，可以按一次执行的顺序读：
+
+1. **进入调试态。** 测试平台在运行中发出 `debug_req` 请求，让处理器转去执行调试程序。这一步建立了 PMP 调试例外生效的前提。
+2. **检查范围内读写。** 调试程序从调试模块范围内读出事先写入的 `0xCAFEBEEF`，再将读到的值写到范围内另一个位置。结束时检查实际写回值，可以区分“程序走到这里了”和“数据确实经过了受测读写路径”。
+3. **检查范围外仍会触发异常。** 程序再访问一个范围外、受保护的地址，预期由异常处理路径报告结果。如果候选补丁简单地在调试态放行一切，前半段读写会成功，却会在这里暴露错误。
+4. **收集判据。** 测试平台同时检查结束标志 `result == 1` 和写回值 `stored_value == 32'hCAFE_BEEF`。错误结束或超过脚本的周期上限都不能通过。记录里错误基线为 FAIL、参考修复为 PASS；这是上游执行结果，此处按脚本解释其含义。[冻结版任务记录](https://huggingface.co/datasets/henryen/hwe-bench/blob/ef3f000af6abdb4a8b4ba6292069694f4d17f14d/hwe_bench_full.jsonl)
+
+这个测试同时问了两个方向的问题：应当放行的访问是否成功，应当拦截的访问是否仍被拦截。它覆盖了一次具体配置与执行路径；Issue 中希望覆盖的所有地址边界和权限组合，仍需逐一检查。
 
 | 从材料里可以确认 | 证据的边界 |
 |---|---|
@@ -61,9 +87,21 @@ Rocket #404 与香山 #3307 的参考修复都只涉及一个文件。前者用�
 | 任务记录保存同名检查在测试侧 FAIL、参考修复侧 PASS | 这是作者保存的运行结果。本项目核对了脚本及记录，本轮未重跑 #2232 的完整核级仿真 |
 | 实际脚本检查具体配置、地址、访问与终止条件 | 其他地址边界、权限组合、不同实现接口的兼容性需要另外验证 |
 
-### 为什么需要数据集、环境和两次运行
+### 谁拿到题面，谁拿到答案，模型最后交付什么？
 
 JSONL 的一行把材料装在一起，执行时再分给不同的角色。工程身份与基线提交确定“在哪份代码上做”；`problem_statement` 告诉 Agent “应出现什么行为”；`fix_patch` 给制题者一份已知修复；`tb_script` 给裁判可执行的判据；`f2p_tests` 记录哪些具名检查在错误版本失败、在参考修复上通过（Fail-to-Pass）。Docker 镜像固定仓库和工具链，某些题还有准备脚本。不同工程的仿真器与验证依赖不同，题号相同也必须核对快照与测试版本。[测试生成](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness/tbgen) · [构造验证](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness/verify) · [题面生成](https://github.com/pku-liang/hwe-bench/tree/7bab86a/hwe_bench/harness/psgen)
+
+从发布数据到一次试次，适配器会把同一条记录拆成不同用途的文件：
+
+| 文件或位置 | 在哪一步使用 | 对求解、评分有什么作用 |
+|---|---|---|
+| `instruction.md` | Agent 开工时 | 展示经复核的行为要求。求解者从这里理解要改什么 |
+| `task.toml`、`environment/` | Harbor 启动试次时 | 描述任务与环境，使求解者在指定的工程快照和工具链中工作 |
+| `solution/solve.sh` | 参考解路径 | 供框架运行已知解时使用。独立求解时应隔离参考解 |
+| `tests/test.sh` | Harbor 收尾时 | 在这个适配器里负责从工作树提取候选补丁。名字里虽有 test，这一步产生的占位分数还不是功能判定 |
+| `tb_script` 与评分日志 | 独立 evaluator 收到补丁后 | 将候选改动应用到干净工程，运行隐藏测试，从具名结果判断是否通过 |
+
+以 #2232 为例，适配器把题面写入 `instruction.md`。求解 Agent 面对的是修复前的工程与可用工具。它查找 PMP 模块、追踪调试状态和地址判断、编辑代码，可以执行自己的检查。这里描述的是任务允许的求解路径；某个模型在某次试验中实际查了什么，需要看那次的工具记录。交付物是工作树相对基线的差异，独立评分器才有隐藏用例来检验它。
 
 ```mermaid
 flowchart TD
@@ -86,19 +124,19 @@ flowchart TD
 
 ## 四、v1.1 改动了哪些判断条件
 
-逐字段对齐两份完整数据后，417 个任务标识一一对应。209 题所有顶层字段相同；158 题仅改测试，20 题仅改题面，29 题同时改测试和题面，1 题连参考修复一起改。按字段统计即 **188 份测试、50 份题面、1 份参考修复**。测试的文本发生变化，数据里保存的基线和参考验证结果字段却相同。作者在发布说明中报告重新验证了修订后的测试；确认这一声明的逐题执行证据，还需要新脚本对应的运行日志。[互斥计数表](evidence/revisions.csv) · [作者发布说明](https://pku-liang.github.io/hwe-bench/v1.1.html)
+逐字段对齐两份完整数据后，417 个任务标识一一对应。209 题所有顶层字段相同；158 题仅改测试，20 题仅改题面，29 题同时改测试和题面，1 题连参考修复一起改。按字段统计即 **188 份测试、50 份题面、1 份参考修复**。测试的文本发生变化，数据里保存的基线和参考验证结果字段却相同。作者在发布说明中报告重新验证了修订后的测试；确认这一声明的逐题执行证据，还需要新脚本对应的运行日志。[互斥计数表](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/revisions.csv) · [作者发布说明](https://pku-liang.github.io/hwe-bench/v1.1.html)
 
 | 修订解决什么问题 | 用什么区分“读到修改”和“验证了效果” |
 |---|---|
-| OpenTitan #12505：测试提供的断言宏只接受某些调用形式，合理的工程写法可能在预处理就失败 | 固定调用，分别用两版测试宏编译。两参调用均通过，三参、四参旧版失败新版通过。这个局部实验验证了签名兼容性，完整 SPI 功能仍需芯片级环境验证。[编译结果](evidence/replay.json) |
+| OpenTitan #12505：测试提供的断言宏只接受某些调用形式，合理的工程写法可能在预处理就失败 | 固定调用，分别用两版测试宏编译。两参调用均通过，三参、四参旧版失败新版通过。这个局部实验验证了签名兼容性，完整 SPI 功能仍需芯片级环境验证。[编译结果](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/replay.json) |
 | Ibex #332：只观察挂起请求的地址，还会漏掉分支后交给处理器的指令流错误 | 新测试增加返回数据与请求地址的对应检查，并检查重定向后的下游交付。这里确定的是脚本覆盖范围的改变。固定候选补丁在两版上的成对判定仍待实跑。[上游说明](https://pku-liang.github.io/hwe-bench/v1.1.html) |
-| OpenTitan #21632：评分前恢复受保护的验证文件，可以清除求解者留下的测试改动 | 对真实 UART 核与验证记分板应用参考修复，再执行恢复阶段。新版保留了核的改动，却把记分板恢复为基线。若想评价设计与配套验证的共同交付，需要给后者单设验收。[文件指纹实验](evidence/owned.json) |
+| OpenTitan #21632：评分前恢复受保护的验证文件，可以清除求解者留下的测试改动 | 对真实 UART 核与验证记分板应用参考修复，再执行恢复阶段。新版保留了核的改动，却把记分板恢复为基线。若想评价设计与配套验证的共同交付，需要给后者单设验收。[文件指纹实验](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/owned.json) |
 
 ## 五、七组系统的高分测出了什么
 
-![六个工程的任务数与 Claude 和 DeepSeek 两套系统各自的未解数](figures/project-results.png)
+![六个工程的任务数与 Claude 和 DeepSeek 两套系统各自的未解数](https://raw.githubusercontent.com/5Mcv4He/hwe-bench-study/main/figures/project-results.png)
 
-图左解释总体成功率的权重，图右解释差距集中在哪里。OpenTitan 占了过半题目，另外五个工程的模型表现容易被总分稀释。例如在 Ibex 上，Claude 与 DeepSeek 相差 5 题，但分母只有 35，换成通过率便相差 14.29 个百分点。[作图数据](evidence/projects.csv)
+图左解释总体成功率的权重，图右解释差距集中在哪里。OpenTitan 占了过半题目，另外五个工程的模型表现容易被总分稀释。例如在 Ibex 上，Claude 与 DeepSeek 相差 5 题，但分母只有 35，换成通过率便相差 14.29 个百分点。[作图数据](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/projects.csv)
 
 | 模型与工具系统 | 通过 / 417 | 通过率 | 官方总成本（美元） |
 |---|---:|---:|---:|
@@ -124,7 +162,7 @@ flowchart TD
 | GPT-5.6 Sol、Claude Opus 4.6、Claude Sonnet 4.6、Qwen3.6 Plus | 各 32 | 都把一组合法提示编码判为非法，其中 0x0002 同时满足零移位量与目的寄存器 x0 |
 | Kimi K2.5 | 1 | 改变了保留编码 0x6101 的既有行为。此项是与项目基线及参考实现的差异，规范对保留编码的要求应单独解释 |
 
-历史 GPT-5.6 Sol 的自建测试把目的寄存器从 1 开始遍历，跳过了 x0。因而这里能指出一个实际遗漏的输入，以及一条解释它为何未在自测中暴露的工具记录。这能诊断这一次提交的自测范围，也给出改题的具体办法。七份候选来自历史实验，不能充当上表最新七套系统在 #54 上的表现。穷举也限于这个小译码模块和所声明的输入域。[七份候选的输入定位](evidence/inputs.json) · [运行结果及反例](evidence/replay.json) · [GPT 历史试次](https://github.com/pku-liang/hwe-bench-artifacts/tree/a368206/jobs/ibex/gpt5.6-sol/pr-54)
+历史 GPT-5.6 Sol 的自建测试把目的寄存器从 1 开始遍历，跳过了 x0。因而这里能指出一个实际遗漏的输入，以及一条解释它为何未在自测中暴露的工具记录。这能诊断这一次提交的自测范围，也给出改题的具体办法。七份候选来自历史实验，不能充当上表最新七套系统在 #54 上的表现。穷举也限于这个小译码模块和所声明的输入域。[七份候选的输入定位](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/inputs.json) · [运行结果及反例](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/replay.json) · [GPT 历史试次](https://github.com/pku-liang/hwe-bench-artifacts/tree/a368206/jobs/ibex/gpt5.6-sol/pr-54)
 
 <a id="limits"></a>
 
@@ -156,7 +194,7 @@ flowchart TD
 | [v1.1 发布说明](https://pku-liang.github.io/hwe-bench/v1.1.html) · [成绩原表](https://github.com/pku-liang/hwe-bench/blob/7bab86a/website/scores-v1.1.json) | 作者给出的修订理由、通过数与费用 |
 | [实验材料冻结版本](https://github.com/pku-liang/hwe-bench-artifacts/tree/a3682069411b5698f456affb17436da1b821ec76) | 历史模型的真实候选补丁、工具记录和最终评分材料 |
 
-[输入指纹](evidence/inputs.json)包含两份 JSONL 的 SHA-256 和所用 Git 文件的 blob 指纹。以下命令在仓库根目录运行。默认把原始材料放到单独的本地目录；原始日志、候选补丁及隐藏脚本由上游提供。研究缓存只供分析与评分使用，未来独立求解时应使用隔离环境。
+[输入指纹](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/inputs.json)包含两份 JSONL 的 SHA-256 和所用 Git 文件的 blob 指纹。以下命令在仓库根目录运行。默认把原始材料放到单独的本地目录；原始日志、候选补丁及隐藏脚本由上游提供。研究缓存只供分析与评分使用，未来独立求解时应使用隔离环境。
 
 ```bash
 python3 analysis/materials.py /tmp/hwe-study-input
@@ -169,9 +207,9 @@ python3 analysis/owned.py /tmp/hwe-study-input
 
 | 文件 | 含义 |
 |---|---|
-| [projects.csv](evidence/projects.csv) · [systems.csv](evidence/systems.csv) | 六个工程、七套系统。总成本包括成功与未解任务的支出 |
-| [task_labels.csv](evidence/task_labels.csv) · [revisions.csv](evidence/revisions.csv) | 官方构造标签频数；按实际发生变化的字段组合互斥计数 |
-| [replay.json](evidence/replay.json) | Ibex #54 的 18 次官方脚本运行、9 组低半字枚举，以及 OpenTitan #12505 的 6 次宏编译；分歧输入为十六进制 |
-| [owned.json](evidence/owned.json) | UART #21632 的两个上游文件在应用参考修复前、应用后、执行恢复阶段后的 SHA-256 |
+| [projects.csv](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/projects.csv) · [systems.csv](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/systems.csv) | 六个工程、七套系统。总成本包括成功与未解任务的支出 |
+| [task_labels.csv](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/task_labels.csv) · [revisions.csv](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/revisions.csv) | 官方构造标签频数；按实际发生变化的字段组合互斥计数 |
+| [replay.json](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/replay.json) | Ibex #54 的 18 次官方脚本运行、9 组低半字枚举，以及 OpenTitan #12505 的 6 次宏编译；分歧输入为十六进制 |
+| [owned.json](https://github.com/5Mcv4He/hwe-bench-study/blob/main/evidence/owned.json) | UART #21632 的两个上游文件在应用参考修复前、应用后、执行恢复阶段后的 SHA-256 |
 
 图表从 projects.csv 生成。需要 Pillow 和支持中文的字体，可运行 `python3 analysis/figure.py --font /path/to/cjk-font.ttc`。Ibex #2232 正文引用的是数据记录及脚本静态核查。不同案例的证据层级在正文分别标明。
