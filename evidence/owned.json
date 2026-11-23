@@ -1,0 +1,26 @@
+{
+  "10": {
+    "hw/ip/uart/dv/env/uart_scoreboard.sv": {
+      "base": "f1945f7a84d6f23876203c778856d8ac2e35137f20392b6b978c9503432b50e8",
+      "patched": "d70aaa8f8e2ca4c3303bc8b1eccc879c15e2534a9f4e667d60b91d76dc127535",
+      "after_restore_phase": "d70aaa8f8e2ca4c3303bc8b1eccc879c15e2534a9f4e667d60b91d76dc127535"
+    },
+    "hw/ip/uart/rtl/uart_core.sv": {
+      "base": "bb7b5b200e154642148f7fecb1340f4b99d9cb81f8273f32167dc0c5ecc77e1a",
+      "patched": "1279bcf84e2f4de5afb50c4487c30ebc9fd01c665e9db9dc2838c4265c07b672",
+      "after_restore_phase": "1279bcf84e2f4de5afb50c4487c30ebc9fd01c665e9db9dc2838c4265c07b672"
+    }
+  },
+  "11": {
+    "hw/ip/uart/dv/env/uart_scoreboard.sv": {
+      "base": "f1945f7a84d6f23876203c778856d8ac2e35137f20392b6b978c9503432b50e8",
+      "patched": "d70aaa8f8e2ca4c3303bc8b1eccc879c15e2534a9f4e667d60b91d76dc127535",
+      "after_restore_phase": "f1945f7a84d6f23876203c778856d8ac2e35137f20392b6b978c9503432b50e8"
+    },
+    "hw/ip/uart/rtl/uart_core.sv": {
+      "base": "bb7b5b200e154642148f7fecb1340f4b99d9cb81f8273f32167dc0c5ecc77e1a",
+      "patched": "1279bcf84e2f4de5afb50c4487c30ebc9fd01c665e9db9dc2838c4265c07b672",
+      "after_restore_phase": "1279bcf84e2f4de5afb50c4487c30ebc9fd01c665e9db9dc2838c4265c07b672"
+    }
+  }
+}

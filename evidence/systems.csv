@@ -1,0 +1,8 @@
+model,harness,passed,tasks,usd,Ibex,CVA6,Caliptra,Rocket Chip,XiangShan,OpenTitan
+Claude Opus 5.5,Claude Code,413,417,5110.22,35,35,16,32,54,241
+GPT-6.1 Sol,Codex CLI,405,417,197.27,34,34,16,28,52,241
+GPT-6 Astra,Codex CLI,405,417,1094.72,34,34,16,27,52,242
+GPT-6 Sol,Codex CLI,390,417,304.23,34,34,16,27,50,229
+Kimi K3.1 Pro,Kimi Code,386,417,483.17,31,33,16,28,47,231
+DeepSeek V4.1 Flash 1017,DeepSeek Harness,386,417,112.53,30,34,16,28,47,231
+GLM 5.3,OpenCode,377,417,1465.25,27,33,16,29,45,227

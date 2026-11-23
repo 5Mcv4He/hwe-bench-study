@@ -1,0 +1,378 @@
+{
+  "simulator": "Icarus Verilog version 13.0 (stable) (v13_0)",
+  "method": "Native Icarus; standard hidden script changes only /home/ibex to a disposable checkout. All inputs have upper halfword zero.",
+  "ibex54": {
+    "base": {
+      "official_script": {
+        "10": "FAIL",
+        "11": "FAIL"
+      },
+      "full_output_diff_count": 206,
+      "illegal_flag_diff_count": 206,
+      "first_40_diff": [
+        "0002",
+        "0006",
+        "000a",
+        "000e",
+        "0012",
+        "0016",
+        "001a",
+        "001e",
+        "0022",
+        "0026",
+        "002a",
+        "002e",
+        "0032",
+        "0036",
+        "003a",
+        "003e",
+        "0042",
+        "0046",
+        "004a",
+        "004e",
+        "0052",
+        "0056",
+        "005a",
+        "005e",
+        "0062",
+        "0066",
+        "006a",
+        "006e",
+        "0072",
+        "0076",
+        "007a",
+        "007e",
+        "0082",
+        "0102",
+        "0182",
+        "0202",
+        "0282",
+        "0302",
+        "0382",
+        "0402"
+      ],
+      "value_at_0002": [
+        "1",
+        "1",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "reference": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 0,
+      "illegal_flag_diff_count": 0,
+      "first_40_diff": [],
+      "value_at_0002": [
+        "1",
+        "0",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "gpt5.6-sol": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 32,
+      "illegal_flag_diff_count": 32,
+      "first_40_diff": [
+        "0002",
+        "0006",
+        "000a",
+        "000e",
+        "0012",
+        "0016",
+        "001a",
+        "001e",
+        "0022",
+        "0026",
+        "002a",
+        "002e",
+        "0032",
+        "0036",
+        "003a",
+        "003e",
+        "0042",
+        "0046",
+        "004a",
+        "004e",
+        "0052",
+        "0056",
+        "005a",
+        "005e",
+        "0062",
+        "0066",
+        "006a",
+        "006e",
+        "0072",
+        "0076",
+        "007a",
+        "007e"
+      ],
+      "value_at_0002": [
+        "1",
+        "1",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "deepseek_v3.2": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 0,
+      "illegal_flag_diff_count": 0,
+      "first_40_diff": [],
+      "value_at_0002": [
+        "1",
+        "0",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "opus4.6": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 32,
+      "illegal_flag_diff_count": 32,
+      "first_40_diff": [
+        "0002",
+        "0006",
+        "000a",
+        "000e",
+        "0012",
+        "0016",
+        "001a",
+        "001e",
+        "0022",
+        "0026",
+        "002a",
+        "002e",
+        "0032",
+        "0036",
+        "003a",
+        "003e",
+        "0042",
+        "0046",
+        "004a",
+        "004e",
+        "0052",
+        "0056",
+        "005a",
+        "005e",
+        "0062",
+        "0066",
+        "006a",
+        "006e",
+        "0072",
+        "0076",
+        "007a",
+        "007e"
+      ],
+      "value_at_0002": [
+        "1",
+        "1",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "sonnet4.6": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 32,
+      "illegal_flag_diff_count": 32,
+      "first_40_diff": [
+        "0002",
+        "0006",
+        "000a",
+        "000e",
+        "0012",
+        "0016",
+        "001a",
+        "001e",
+        "0022",
+        "0026",
+        "002a",
+        "002e",
+        "0032",
+        "0036",
+        "003a",
+        "003e",
+        "0042",
+        "0046",
+        "004a",
+        "004e",
+        "0052",
+        "0056",
+        "005a",
+        "005e",
+        "0062",
+        "0066",
+        "006a",
+        "006e",
+        "0072",
+        "0076",
+        "007a",
+        "007e"
+      ],
+      "value_at_0002": [
+        "1",
+        "1",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "gpt5.4": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 0,
+      "illegal_flag_diff_count": 0,
+      "first_40_diff": [],
+      "value_at_0002": [
+        "1",
+        "0",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    },
+    "kimi_k2.5": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 1,
+      "illegal_flag_diff_count": 1,
+      "first_40_diff": [
+        "6101"
+      ],
+      "value_at_0002": [
+        "1",
+        "0",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "0",
+        "00010113"
+      ]
+    },
+    "qwen3.6plus": {
+      "official_script": {
+        "10": "PASS",
+        "11": "PASS"
+      },
+      "full_output_diff_count": 32,
+      "illegal_flag_diff_count": 32,
+      "first_40_diff": [
+        "0002",
+        "0006",
+        "000a",
+        "000e",
+        "0012",
+        "0016",
+        "001a",
+        "001e",
+        "0022",
+        "0026",
+        "002a",
+        "002e",
+        "0032",
+        "0036",
+        "003a",
+        "003e",
+        "0042",
+        "0046",
+        "004a",
+        "004e",
+        "0052",
+        "0056",
+        "005a",
+        "005e",
+        "0062",
+        "0066",
+        "006a",
+        "006e",
+        "0072",
+        "0076",
+        "007a",
+        "007e"
+      ],
+      "value_at_0002": [
+        "1",
+        "1",
+        "00001013"
+      ],
+      "value_at_6101": [
+        "1",
+        "1",
+        "00010113"
+      ]
+    }
+  },
+  "macro12505": {
+    "10_two": {
+      "rc": 0,
+      "stderr": ""
+    },
+    "10_three": {
+      "rc": 1,
+      "stderr": "macro.sv:3: error: too many arguments for `ASSERT\nPreprocessor failed with 1 errors."
+    },
+    "10_four": {
+      "rc": 1,
+      "stderr": "macro.sv:3: error: too many arguments for `ASSERT\nPreprocessor failed with 1 errors."
+    },
+    "11_two": {
+      "rc": 0,
+      "stderr": ""
+    },
+    "11_three": {
+      "rc": 0,
+      "stderr": ""
+    },
+    "11_four": {
+      "rc": 0,
+      "stderr": ""
+    }
+  }
+}

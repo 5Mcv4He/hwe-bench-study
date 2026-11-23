@@ -1,0 +1,72 @@
+[
+  {
+    "local": "v10.jsonl",
+    "url": "https://huggingface.co/datasets/henryen/hwe-bench/resolve/v1.0/hwe_bench_full.jsonl",
+    "sha256": "518c7781fea12e9c658f8b1b46e7736a68828da1269c983bb016722b14c5737a"
+  },
+  {
+    "local": "v11.jsonl",
+    "url": "https://huggingface.co/datasets/henryen/hwe-bench/resolve/ef3f000af6abdb4a8b4ba6292069694f4d17f14d/hwe_bench_full.jsonl",
+    "sha256": "89864f576c38eace67bf2f4b4279558621e12559b9fefc908ba8fc4be0164bf1"
+  },
+  {
+    "local": "code/website/scores-v1.1.json",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench/7bab86a1018c202395a957f68e918bee4e68f073/website/scores-v1.1.json",
+    "git_blob": "4c0b691571392750663afbfc2a8ef959422e4aae"
+  },
+  {
+    "local": "ibex54/rtl/ibex_defines.sv",
+    "url": "https://raw.githubusercontent.com/lowRISC/ibex/cd15ce88beba8ed8496f414af361f664764f47e2/rtl/ibex_defines.sv",
+    "git_blob": "2abb6fa918167cf4e57ed4646a21740b2806d107"
+  },
+  {
+    "local": "ibex54/rtl/ibex_compressed_decoder.sv",
+    "url": "https://raw.githubusercontent.com/lowRISC/ibex/cd15ce88beba8ed8496f414af361f664764f47e2/rtl/ibex_compressed_decoder.sv",
+    "git_blob": "d0b31dd7a032f0e6219fedf253826646704713e7"
+  },
+  {
+    "local": "pieces/ibex-54-gpt5.6-sol/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/gpt5.6-sol/pr-54/verifier/model_patch.diff",
+    "git_blob": "3c6e893825d781d50ea0661293e86f1d557073ef"
+  },
+  {
+    "local": "pieces/ibex-54-deepseek_v3.2/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/deepseek_v3.2/pr-54/verifier/model_patch.diff",
+    "git_blob": "3000ec0e1b0938a4ef93a5eb30a2f158aa134400"
+  },
+  {
+    "local": "pieces/ibex-54-qwen3.6plus/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/qwen3.6plus/pr-54/verifier/model_patch.diff",
+    "git_blob": "8910bc5115b14475ebb3d5f3ac24aa1b0eb95f95"
+  },
+  {
+    "local": "pieces/ibex-54-opus4.6/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/opus4.6/pr-54/verifier/model_patch.diff",
+    "git_blob": "57cf1aedb545344803f583b3445004eeeb4da2ef"
+  },
+  {
+    "local": "pieces/ibex-54-sonnet4.6/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/sonnet4.6/pr-54/verifier/model_patch.diff",
+    "git_blob": "3bc293938041d61b6f8dc85ce2d61514c628b576"
+  },
+  {
+    "local": "pieces/ibex-54-kimi_k2.5/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/kimi_k2.5/pr-54/verifier/model_patch.diff",
+    "git_blob": "f8af90ca0379feb0fb32528873d84c9a211306cb"
+  },
+  {
+    "local": "pieces/ibex-54-gpt5.4/model_patch.diff",
+    "url": "https://raw.githubusercontent.com/pku-liang/hwe-bench-artifacts/a3682069411b5698f456affb17436da1b821ec76/jobs/ibex/gpt5.4/pr-54/verifier/model_patch.diff",
+    "git_blob": "16e9c15aa48aed4f87da1d2b8d2637748648762f"
+  },
+  {
+    "local": "uart/hw/ip/uart/dv/env/uart_scoreboard.sv",
+    "url": "https://raw.githubusercontent.com/lowRISC/opentitan/74e953a0debd53886c46d7fa2f4ec110536bfd90/hw/ip/uart/dv/env/uart_scoreboard.sv",
+    "git_blob": "c8af7db6022f649fff1e2272bdd51161f3db8a52"
+  },
+  {
+    "local": "uart/hw/ip/uart/rtl/uart_core.sv",
+    "url": "https://raw.githubusercontent.com/lowRISC/opentitan/74e953a0debd53886c46d7fa2f4ec110536bfd90/hw/ip/uart/rtl/uart_core.sv",
+    "git_blob": "3dec6c71fea2bfa1d3f0f533ec5f1ea8dd7b4c70"
+  }
+]
