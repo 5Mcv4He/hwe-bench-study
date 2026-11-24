@@ -6,7 +6,7 @@
 
 核心问题：**真实硬件 Bug 怎样被转化成可执行的 Agent 任务？一次 PASS 具体证明了什么？验证器会遗漏哪些行为差异？**
 
-**研究入口：** [研究底稿](report/research-notes.md) · [研究报告](report/hwe-bench-v1.1.md) · [复现说明与证据](evidence/README.md) · [分析与重放脚本](analysis/) · [图表](figures/project-results.png)
+**研究入口：** [研究底稿](report/research-notes.md) · [研究报告](report/hwe-bench-v1.1.md) · [验证器有效性诊断](report/verifier-validity.md) · [复现说明与证据](evidence/README.md) · [分析与重放脚本](analysis/) · [图表](figures/project-results.png)
 
 ## 研究背景与对象
 
@@ -40,6 +40,7 @@ HWE-bench 从 Ibex、CVA6、Caliptra、Rocket Chip、OpenTitan 和 XiangShan 六
 | --- | --- |
 | [研究底稿](report/research-notes.md) | 研究思路、任务机制梳理、案例分析与技术讨论 |
 | [研究报告](report/hwe-bench-v1.1.md) | HWE-bench v1.1 的数据分析、评测机制与实验诊断 |
+| [验证器有效性诊断](report/verifier-validity.md) | v1.1 弱检查、参考实现耦合、评分环境隔离与 Ibex #54 的证据分层分析 |
 | [analysis/](analysis/) | 数据整理、局部复现、比较分析与作图程序 |
 | [evidence/README.md](evidence/README.md) | 数据出处、固定版本、复现条件与证据边界 |
 | [evidence/replay.json](evidence/replay.json) | Ibex #54 实验、OpenTitan #12505 宏编译结果 |
