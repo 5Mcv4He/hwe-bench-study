@@ -6,7 +6,7 @@
 
 核心问题：**真实硬件 Bug 怎样被转化成可执行的 Agent 任务？一次 PASS 具体证明了什么？验证器会遗漏哪些行为差异？**
 
-**研究入口：** [原始完整研究底稿（旧版 README，未删节）](report/hwe-bench-original-research-notes.md) · [阶段性研究报告（v0.1）](report/hwe-bench-v1.1.md) · [复现说明与证据](evidence/README.md) · [分析与重放脚本](analysis/) · [图表](figures/project-results.png)
+**研究入口：** [研究底稿](report/research-notes.md) · [研究报告](report/hwe-bench-v1.1.md) · [复现说明与证据](evidence/README.md) · [分析与重放脚本](analysis/) · [图表](figures/project-results.png)
 
 ## 研究背景与对象
 
@@ -38,8 +38,8 @@ HWE-bench 从 Ibex、CVA6、Caliptra、Rocket Chip、OpenTitan 和 XiangShan 六
 
 | 路径 | 内容 |
 | --- | --- |
-| [report/hwe-bench-original-research-notes.md](report/hwe-bench-original-research-notes.md) | **原始完整研究底稿**：修改前的长 README，保留研究思路、逐步追问、案例分析及初步呈现方式；原文存档，不作删改 |
-| [report/hwe-bench-v1.1.md](report/hwe-bench-v1.1.md) | **阶段性研究整理稿 v0.1**：将已有分析和实验组织成较精炼的报告，不替代原始底稿 |
+| [研究底稿](report/research-notes.md) | 研究思路、任务机制梳理、案例分析与技术讨论 |
+| [研究报告](report/hwe-bench-v1.1.md) | HWE-bench v1.1 的数据分析、评测机制与实验诊断 |
 | [analysis/](analysis/) | 数据整理、局部复现、比较分析与作图程序 |
 | [evidence/README.md](evidence/README.md) | 数据出处、固定版本、复现条件与证据边界 |
 | [evidence/replay.json](evidence/replay.json) | Ibex #54 实验、OpenTitan #12505 宏编译结果 |
